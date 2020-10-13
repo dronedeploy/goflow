@@ -161,6 +161,9 @@ func attachChanPort(port reflect.Value, dir reflect.ChanDir, ch reflect.Value, b
 		return ch, err
 	}
 	ch = selectOrMakeChan(ch, port, port.Type().Elem(), bufSize)
+	if !ch.Type().AssignableTo(port.Type()) {
+		return ch, fmt.Errorf("can't assign %v to %v", ch.Type().String(), port.Type().String())
+	}
 	port.Set(ch)
 	return ch, nil
 }
@@ -175,6 +178,9 @@ func attachMapPort(port reflect.Value, key string, dir reflect.ChanDir, ch refle
 	if port.IsNil() {
 		m := reflect.MakeMap(port.Type())
 		port.Set(m)
+	}
+	if !ch.Type().AssignableTo(port.Type().Elem()) {
+		return ch, fmt.Errorf("can't assign %v to %v", ch.Type().String(), port.Type().Elem().String())
 	}
 	port.SetMapIndex(kv, ch)
 	return ch, nil
@@ -196,6 +202,9 @@ func attachArrayPort(port reflect.Value, key int, dir reflect.ChanDir, ch reflec
 	}
 	item := port.Index(key)
 	ch = selectOrMakeChan(ch, item, port.Type().Elem().Elem(), bufSize)
+	if !ch.Type().AssignableTo(item.Type()) {
+		return ch, fmt.Errorf("can't assign %v to %v", ch.Type().String(), item.Type().String())
+	}
 	item.Set(ch)
 	return ch, nil
 }
