@@ -40,6 +40,8 @@ type Graph struct {
 	chanListenersCountLock sync.Locker
 	// iips contains initial IPs attached to the network
 	iips []iip
+
+	errors chan error
 }
 
 // NewGraph returns a new initialized empty graph instance
@@ -166,12 +168,18 @@ func (n *Graph) Remove(processName string) error {
 // 	return n.waitGrp
 // }
 
+func (n *Graph) AddErrorHandler(errors chan error) {
+	n.errors = errors
+}
+
 // Process runs the network
 func (n *Graph) Process() {
 	err := n.sendIIPs()
 	if err != nil {
-		// TODO provide a nicer way to handle graph errors
-		panic(err)
+		if n.errors != nil {
+			n.errors <- err
+		}
+		return
 	}
 	for _, i := range n.procs {
 		c, ok := i.(Component)
