@@ -78,6 +78,15 @@ func (n *Graph) sendIIPs() error {
 		}
 
 		if found {
+			// Check if the IIP data is going to be the right type.
+			if !reflect.TypeOf(ip.data).AssignableTo(channel.Type().Elem()) {
+				if shouldClose {
+					channel.Close()
+				}
+
+				return fmt.Errorf("can't send IIP: %v cannot fit into %v", reflect.TypeOf(ip.data), channel.Type())
+			}
+
 			// Send data to the port
 			go func() {
 				channel.Send(reflect.ValueOf(ip.data))
