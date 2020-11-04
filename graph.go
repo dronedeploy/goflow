@@ -208,7 +208,10 @@ func (n *Graph) closeProcOuts(proc interface{}) {
 			continue
 		}
 		if n.decChanListenersCount(field) {
-			field.Close()
+			// Note that reflect reports IsValid() even if the channel is nil, so we need to check that it's ok to close before we try to do so.  This prevents unconnected outputs panicking at shutdown.
+			if !field.IsNil() {
+				field.Close()
+			}
 		}
 	}
 }
