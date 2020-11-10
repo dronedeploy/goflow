@@ -106,8 +106,6 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 	// Check if the sender embeds a net.
 	val := reflect.ValueOf(proc)
-	t := val.Type()
-	fmt.Printf(">>>> %v", t)
 	var embeddedGraph *Graph
 	i := val.Interface()
 	embeds, ok := i.(EmbedsGraph)
