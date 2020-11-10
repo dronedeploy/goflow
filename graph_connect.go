@@ -100,21 +100,17 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		return nilValue, fmt.Errorf("getProcPort: process '%s' not found", procName)
 	}
 
-	// Check if process is settable
-	val := reflect.ValueOf(proc)
-	if val.Kind() == reflect.Ptr && val.IsValid() {
-		val = val.Elem()
-	}
-	if !val.CanSet() {
-		return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
-	}
-
 	// Get the port value
 	var portVal reflect.Value
 	var err error
+
 	// Check if the sender embeds a net.
+	val := reflect.ValueOf(proc)
+	t := val.Type()
+	fmt.Printf(">>>> %v", t)
 	var embeddedGraph *Graph
-	embeds, ok := val.Interface().(EmbedsGraph)
+	i := val.Interface()
+	embeds, ok := i.(EmbedsGraph)
 	if ok {
 		embeddedGraph = embeds.GetGraph()
 	}
@@ -122,8 +118,26 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	// Check if sender is a net
 	var net Graph
 	if embeddedGraph != nil {
+		nv := reflect.ValueOf(embeddedGraph)
+
+		// Check if process is settable
+		if nv.Kind() == reflect.Ptr && nv.IsValid() {
+			nv = nv.Elem()
+		}
+		if !nv.CanSet() {
+			return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
+		}
+
 		net = *embeddedGraph
 	} else {
+		// Check if process is settable
+		if val.Kind() == reflect.Ptr && val.IsValid() {
+			val = val.Elem()
+		}
+		if !val.CanSet() {
+			return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
+		}
+
 		net, ok = val.Interface().(Graph)
 	}
 	if ok {

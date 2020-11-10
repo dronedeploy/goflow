@@ -131,6 +131,46 @@ func TestSubgraphSender(t *testing.T) {
 	testGraphWithNumberSequence(n, t)
 }
 
+type embedded struct {
+	g *Graph
+}
+
+func (e *embedded) GetGraph() *Graph {
+	return e.g
+}
+
+func (e *embedded) Process() {
+	e.g.Process()
+}
+
+func TestEmbedSender(t *testing.T) {
+	e := &embedded{}
+	var _ EmbedsGraph = e
+	var err error
+	e.g, err = newDoubleEcho()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	n := NewGraph()
+	if err = n.Add("sub", e); err != nil {
+		t.Error(err)
+		return
+	}
+	n.Add("e3", new(echo))
+
+	if err := n.Connect("e3", "Out", "sub", "In"); err != nil {
+		t.Error(err)
+		return
+	}
+
+	n.MapInPort("In", "e3", "In")
+	n.MapOutPort("Out", "sub", "Out")
+
+	testGraphWithNumberSequence(n, t)
+}
+
 func TestSubgraphReceiver(t *testing.T) {
 	sub, err := newDoubleEcho()
 	if err != nil {
