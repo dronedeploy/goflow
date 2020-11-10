@@ -112,8 +112,20 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 	// Get the port value
 	var portVal reflect.Value
 	var err error
+	// Check if the sender embeds a net.
+	var embeddedGraph *Graph
+	embeds, ok := val.Interface().(EmbedsGraph)
+	if ok {
+		embeddedGraph = embeds.GetGraph()
+	}
+
 	// Check if sender is a net
-	net, ok := val.Interface().(Graph)
+	var net Graph
+	if embeddedGraph != nil {
+		net = *embeddedGraph
+	} else {
+		net, ok = val.Interface().(Graph)
+	}
 	if ok {
 		// Sender is a net
 		var ports map[string]port
@@ -125,7 +137,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 		p, ok := ports[portName]
 		if !ok {
-			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have inport '%s'", procName, portName)
+			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have port '%s'", procName, portName)
 		}
 
 		portVal, err = net.getProcPort(p.addr.proc, p.addr.port, dir)

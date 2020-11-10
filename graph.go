@@ -12,6 +12,10 @@ type GraphConfig struct {
 	BufferSize int
 }
 
+type EmbedsGraph interface {
+	GetGraph() *Graph
+}
+
 // defaultGraphConfig provides defaults for GraphConfig
 func defaultGraphConfig() GraphConfig {
 	return GraphConfig{
