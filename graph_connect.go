@@ -152,7 +152,21 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have port '%s'", procName, portName)
 		}
 
-		portVal, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
+		// When the sender is a net, then need to consider that the underlying port we're going to connect to might be array or map type.
+		if p.addr.index > -1 {
+			var v reflect.Value
+			v, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
+			portVal = v.Index(p.addr.index)
+
+		} else if p.addr.key != "" {
+			var v reflect.Value
+			v, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
+			portVal = v.MapIndex(reflect.ValueOf(p.addr.key))
+
+		} else {
+			portVal, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
+		}
+
 	} else {
 		// Sender is a proc
 		portVal = val.FieldByName(portName)
