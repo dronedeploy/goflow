@@ -62,6 +62,9 @@ func (n *Graph) sendIIPs() error {
 			for j := range n.connections {
 				if n.connections[j].tgt == ip.addr {
 					channel = n.connections[j].channel
+					if !channel.IsValid() {
+						continue
+					}
 					found = true
 					break
 				}
