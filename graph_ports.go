@@ -18,7 +18,10 @@ type port struct {
 // MapInPort adds an inport to the net and maps it to a contained proc's port.
 func (n *Graph) MapInPort(name, procName, procPort string) {
 	addr := parseAddress(procName, procPort)
-	n.inPorts[name] = port{addr: addr}
+	n.inPorts[name] = port{
+		channel: reflect.ValueOf(nil),
+		addr:    addr,
+	}
 }
 
 // // AnnotateInPort sets optional run-time annotation for the port utilized by
@@ -44,7 +47,10 @@ func (n *Graph) MapInPort(name, procName, procPort string) {
 // MapOutPort adds an outport to the net and maps it to a contained proc's port.
 func (n *Graph) MapOutPort(name, procName, procPort string) {
 	addr := parseAddress(procName, procPort)
-	n.outPorts[name] = port{addr: addr}
+	n.outPorts[name] = port{
+		addr:    addr,
+		channel: reflect.ValueOf(nil),
+	}
 }
 
 // // AnnotateOutPort sets optional run-time annotation for the port utilized by
