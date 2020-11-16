@@ -79,11 +79,11 @@ func (n *Graph) sendIIPs() error {
 			}
 
 			if recvIndex > -1 {
-				channel, err = attachArrayPort(recvPort, recvIndex, reflect.BothDir, reflect.ValueOf(nil), n.conf.BufferSize)
+				channel, err = attachArrayPort(recvPort, recvIndex, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
 			} else if recvKey != "" {
-				channel, err = attachMapPort(recvPort, recvKey, reflect.BothDir, reflect.ValueOf(nil), n.conf.BufferSize)
+				channel, err = attachMapPort(recvPort, recvKey, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
 			} else {
-				channel, err = attachPort(recvPort, ip.addr, reflect.BothDir, reflect.ValueOf(nil), n.conf.BufferSize)
+				channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
 			}
 			if err != nil {
 				return err
