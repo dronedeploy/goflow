@@ -95,8 +95,8 @@ func (n *Graph) sendIIPs() error {
 
 		if found {
 			// Make sure the channel is valid.
-			if channel.IsValid() {
-				return fmt.Errorf("port lookup returned invalid channel")
+			if !channel.IsValid() {
+				return fmt.Errorf("port lookup for %v returned invalid channel", ip.addr)
 			}
 
 			// Check if the IIP data is going to be the right type.

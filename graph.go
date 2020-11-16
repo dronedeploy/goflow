@@ -183,7 +183,6 @@ func (n *Graph) Process() {
 		if n.errors != nil {
 			n.errors <- err
 		}
-		return
 	}
 	for _, i := range n.procs {
 		c, ok := i.(Component)
