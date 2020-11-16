@@ -67,12 +67,22 @@ func (n *Graph) sendIIPs() error {
 
 		if !found {
 			// Try to find a proc and attach a new channel to it
-			recvPort, err := n.getProcPort(ip.addr.proc, ip.addr.port, reflect.RecvDir)
+			recvPort, recvIndex, recvKey, err := n.getProcPort(ip.addr.proc, ip.addr.port, reflect.RecvDir)
 			if err != nil {
 				return err
 			}
 
-			channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			if recvIndex > -1 {
+				channel, err = attachArrayPort(recvPort, recvIndex, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			} else if recvKey != "" {
+				channel, err = attachMapPort(recvPort, recvKey, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			} else {
+				channel, err = attachPort(recvPort, ip.addr, reflect.RecvDir, reflect.ValueOf(nil), n.conf.BufferSize)
+			}
+			if err != nil {
+				return err
+			}
+
 			found = true
 			shouldClose = true
 		}

@@ -42,13 +42,13 @@ func (n *Graph) Connect(senderName, senderPort, receiverName, receiverPort strin
 // It returns true on success or panics and returns false if error occurs.
 func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort string, bufferSize int) error {
 	sendAddr := parseAddress(senderName, senderPort)
-	sendPort, err := n.getProcPort(senderName, sendAddr.port, reflect.SendDir)
+	sendPort, sendIndex, sendKey, err := n.getProcPort(senderName, sendAddr.port, reflect.SendDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
 
 	recvAddr := parseAddress(receiverName, receiverPort)
-	recvPort, err := n.getProcPort(receiverName, recvAddr.port, reflect.RecvDir)
+	recvPort, recvIndex, recvKey, err := n.getProcPort(receiverName, recvAddr.port, reflect.RecvDir)
 	if err != nil {
 		return fmt.Errorf("connect: %w", err)
 	}
@@ -68,12 +68,26 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 			isNewChan = true
 		}
 	}
-	ch, err = attachPort(sendPort, sendAddr, reflect.SendDir, ch, bufferSize)
+
+	if sendIndex > -1 {
+		ch, err = attachArrayPort(sendPort, sendIndex, reflect.SendDir, ch, bufferSize)
+	} else if sendKey != "" {
+		ch, err = attachMapPort(sendPort, sendKey, reflect.SendDir, ch, bufferSize)
+	} else {
+		ch, err = attachPort(sendPort, sendAddr, reflect.SendDir, ch, bufferSize)
+	}
 	if err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", senderName, senderPort, err)
 	}
 
-	if _, err = attachPort(recvPort, recvAddr, reflect.RecvDir, ch, bufferSize); err != nil {
+	if recvIndex > -1 {
+		_, err = attachArrayPort(recvPort, recvIndex, reflect.RecvDir, ch, bufferSize)
+	} else if recvKey != "" {
+		_, err = attachMapPort(recvPort, recvKey, reflect.RecvDir, ch, bufferSize)
+	} else {
+		_, err = attachPort(recvPort, recvAddr, reflect.RecvDir, ch, bufferSize)
+	}
+	if err != nil {
 		return fmt.Errorf("connect '%s.%s': %w", receiverName, receiverPort, err)
 	}
 	if isNewChan {
@@ -92,16 +106,18 @@ func (n *Graph) ConnectBuf(senderName, senderPort, receiverName, receiverPort st
 }
 
 // getProcPort finds an assignable port field in one of the subprocesses
-func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (reflect.Value, error) {
+func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (reflect.Value, int, string, error) {
 	nilValue := reflect.ValueOf(nil)
 	// Check if process exists
 	proc, ok := n.procs[procName]
 	if !ok {
-		return nilValue, fmt.Errorf("getProcPort: process '%s' not found", procName)
+		return nilValue, -1, "", fmt.Errorf("getProcPort: process '%s' not found", procName)
 	}
 
 	// Get the port value
 	var portVal reflect.Value
+	var portIndex int = -1
+	var portKey string = ""
 	var err error
 
 	// Check if the sender embeds a net.
@@ -123,7 +139,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 			nv = nv.Elem()
 		}
 		if !nv.CanSet() {
-			return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
+			return nilValue, -1, "", fmt.Errorf("getProcPort: process '%s' is not settable", procName)
 		}
 
 		net = *embeddedGraph
@@ -133,7 +149,7 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 			val = val.Elem()
 		}
 		if !val.CanSet() {
-			return nilValue, fmt.Errorf("getProcPort: process '%s' is not settable", procName)
+			return nilValue, -1, "", fmt.Errorf("getProcPort: process '%s' is not settable", procName)
 		}
 
 		net, ok = val.Interface().(Graph)
@@ -149,22 +165,15 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 
 		p, ok := ports[portName]
 		if !ok {
-			return nilValue, fmt.Errorf("getProcPort: subgraph '%s' does not have port '%s'", procName, portName)
+			return nilValue, -1, "", fmt.Errorf("getProcPort: subgraph '%s' does not have port '%s'", procName, portName)
 		}
 
-		// When the sender is a net, then need to consider that the underlying port we're going to connect to might be array or map type.
-		if p.addr.index > -1 {
-			var v reflect.Value
-			v, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
-			portVal = v.Index(p.addr.index)
-
-		} else if p.addr.key != "" {
-			var v reflect.Value
-			v, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
-			portVal = v.MapIndex(reflect.ValueOf(p.addr.key))
-
-		} else {
-			portVal, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
+		portVal, portIndex, portKey, err = net.getProcPort(p.addr.proc, p.addr.port, dir)
+		if portIndex == -1 {
+			portIndex = p.addr.index
+		}
+		if portKey == "" {
+			portKey = p.addr.key
 		}
 
 	} else {
@@ -175,10 +184,10 @@ func (n *Graph) getProcPort(procName, portName string, dir reflect.ChanDir) (ref
 		err = fmt.Errorf("process '%s' does not have a valid port '%s'", procName, portName)
 	}
 	if err != nil {
-		return nilValue, fmt.Errorf("getProcPort: %w", err)
+		return nilValue, -1, "", fmt.Errorf("getProcPort: %w", err)
 	}
 
-	return portVal, nil
+	return portVal, portIndex, portKey, nil
 }
 
 func attachPort(port reflect.Value, addr address, dir reflect.ChanDir, ch reflect.Value, bufSize int) (reflect.Value, error) {

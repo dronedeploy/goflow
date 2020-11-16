@@ -93,11 +93,18 @@ func (n *Graph) setGraphPort(name string, channel interface{}, dir reflect.ChanD
 		return fmt.Errorf("setGraphPort: %s port '%s' not defined", dirDescr, name)
 	}
 	// Try to attach it
-	port, err := n.getProcPort(p.addr.proc, p.addr.port, dir)
+	port, portIndex, portKey, err := n.getProcPort(p.addr.proc, p.addr.port, dir)
 	if err != nil {
 		return fmt.Errorf("setGraphPort: cannot set %s port '%s': %w", dirDescr, name, err)
 	}
-	_, err = attachPort(port, p.addr, dir, reflect.ValueOf(channel), n.conf.BufferSize)
+
+	if portIndex > -1 {
+		_, err = attachArrayPort(port, portIndex, dir, reflect.ValueOf(channel), n.conf.BufferSize)
+	} else if portKey != "" {
+		_, err = attachMapPort(port, portKey, dir, reflect.ValueOf(channel), n.conf.BufferSize)
+	} else {
+		_, err = attachPort(port, p.addr, dir, reflect.ValueOf(channel), n.conf.BufferSize)
+	}
 	if err != nil {
 		return fmt.Errorf("setGraphPort: cannot attach %s port '%s': %w", dirDescr, name, err)
 	}

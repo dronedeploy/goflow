@@ -40,8 +40,12 @@ func testGraphWithNumberSequence(n *Graph, t *testing.T) {
 
 	in := make(chan int)
 	out := make(chan int)
-	n.SetInPort("In", in)
-	n.SetOutPort("Out", out)
+	if err := n.SetInPort("In", in); err != nil {
+		t.Fatal(err)
+	}
+	if err := n.SetOutPort("Out", out); err != nil {
+		t.Fatal(err)
+	}
 
 	wait := Run(n)
 

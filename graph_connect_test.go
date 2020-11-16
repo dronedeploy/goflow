@@ -171,6 +171,42 @@ func TestEmbedSender(t *testing.T) {
 	testGraphWithNumberSequence(n, t)
 }
 
+func TestEmbeddedArraySender(t *testing.T) {
+	e1 := &embedded{}
+	var _ EmbedsGraph = e1
+	e1.g = NewGraph()
+	if err := e1.g.Add("e11", &irouter{}); err != nil {
+		t.Fatal(err)
+	}
+	e1.g.MapInPort("In", "e11", "In[0]")
+	e1.g.MapOutPort("Out", "e11", "Out[0]")
+
+	e2 := &embedded{}
+	var _ EmbedsGraph = e2
+	e2.g = NewGraph()
+	if err := e2.g.Add("e21", &irouter{}); err != nil {
+		t.Fatal(err)
+	}
+	e2.g.MapInPort("In", "e21", "In[0]")
+	e2.g.MapOutPort("Out", "e21", "Out[0]")
+
+	outer := NewGraph()
+	if err := outer.Add("o1", e1); err != nil {
+		t.Fatal(err)
+	}
+	if err := outer.Add("o2", e2); err != nil {
+		t.Fatal(err)
+	}
+	if err := outer.Connect("o1", "Out", "o2", "In"); err != nil {
+		t.Fatal(err)
+	}
+
+	outer.MapInPort("In", "o1", "In")
+	outer.MapOutPort("Out", "o2", "Out")
+
+	testGraphWithNumberSequence(outer, t)
+}
+
 func TestSubgraphReceiver(t *testing.T) {
 	sub, err := newDoubleEcho()
 	if err != nil {
