@@ -95,7 +95,7 @@ func (n *Graph) sendIIPs() error {
 
 		if found {
 			// Make sure the channel is valid.
-			if channel.IsZero() {
+			if channel.IsValid() {
 				return fmt.Errorf("port lookup returned invalid channel")
 			}
 
