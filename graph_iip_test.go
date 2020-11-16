@@ -1,6 +1,7 @@
 package goflow
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -15,6 +16,147 @@ func newRepeatGraph() (*Graph, error) {
 	n.MapOutPort("Words", "r", "Words")
 
 	return n, nil
+}
+
+func TestStructIIP(t *testing.T) {
+	g := NewGraph()
+	e := &echoMyStruct{}
+	if err := g.Add("e", e); err != nil {
+		t.Fatal(err)
+	}
+	g.MapInPort("In", "e", "In")
+	g.MapOutPort("Out", "e", "Out")
+
+	out := make(chan *myStruct)
+	g.SetOutPort("Out", out)
+
+	dat := &myStruct{
+		A: "hello",
+		B: "world",
+	}
+	if err := g.AddIIP("e", "In", dat); err != nil {
+		t.Fatal(err)
+	}
+
+	wait := Run(g)
+	var ok bool
+do_loop:
+	for {
+		select {
+		case <-wait:
+			break do_loop
+		case <-out:
+			ok = true
+		}
+	}
+
+	if !ok {
+		t.Fatal(errors.New("no output"))
+	}
+}
+
+func TestMapStructIIP(t *testing.T) {
+	g := NewGraph()
+	e := &echoMyStruct{}
+	if err := g.Add("e", e); err != nil {
+		t.Fatal(err)
+	}
+	g.MapInPort("In", "e", "In")
+	g.MapOutPort("Out", "e", "Out")
+
+	out := make(chan *myStruct)
+	g.SetOutPort("Out", out)
+
+	dat := &map[string]interface{}{
+		"a": "hello",
+		"b": "world",
+	}
+	if err := g.AddIIP("e", "In", dat); err != nil {
+		t.Fatal(err)
+	}
+
+	wait := Run(g)
+	var ok bool
+do_loop:
+	for {
+		select {
+		case <-wait:
+			break do_loop
+		case <-out:
+			ok = true
+		}
+	}
+
+	if !ok {
+		t.Fatal(errors.New("no output"))
+	}
+}
+
+func TestMapEmptyStructIIP1(t *testing.T) {
+	g := NewGraph()
+	e := &echoEmptyStruct{}
+	if err := g.Add("e", e); err != nil {
+		t.Fatal(err)
+	}
+	g.MapInPort("In", "e", "In")
+	g.MapOutPort("Out", "e", "Out")
+
+	out := make(chan struct{})
+	g.SetOutPort("Out", out)
+
+	dat := &map[string]interface{}{}
+	if err := g.AddIIP("e", "In", dat); err != nil {
+		t.Fatal(err)
+	}
+
+	wait := Run(g)
+	var ok bool
+do_loop:
+	for {
+		select {
+		case <-wait:
+			break do_loop
+		case <-out:
+			ok = true
+		}
+	}
+
+	if !ok {
+		t.Fatal(errors.New("no output"))
+	}
+}
+
+func TestMapEmptyStructIIP2(t *testing.T) {
+	g := NewGraph()
+	e := &echoEmptyStruct{}
+	if err := g.Add("e", e); err != nil {
+		t.Fatal(err)
+	}
+	g.MapInPort("In", "e", "In")
+	g.MapOutPort("Out", "e", "Out")
+
+	out := make(chan struct{})
+	g.SetOutPort("Out", out)
+
+	if err := g.AddIIP("e", "In", struct{}{}); err != nil {
+		t.Fatal(err)
+	}
+
+	wait := Run(g)
+	var ok bool
+do_loop:
+	for {
+		select {
+		case <-wait:
+			break do_loop
+		case <-out:
+			ok = true
+		}
+	}
+
+	if !ok {
+		t.Fatal(errors.New("no output"))
+	}
 }
 
 func TestBasicIIP(t *testing.T) {

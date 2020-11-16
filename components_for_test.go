@@ -68,6 +68,35 @@ func (c *adder) Process() {
 	}
 }
 
+// echoEmptyStruct passes a struct from input to output.
+type echoEmptyStruct struct {
+	In  <-chan struct{}
+	Out chan<- struct{}
+}
+
+func (c *echoEmptyStruct) Process() {
+	for i := range c.In {
+		c.Out <- i
+	}
+}
+
+// echoMyStruct passes a struct from input to output.
+type echoMyStruct struct {
+	In  <-chan *myStruct
+	Out chan<- *myStruct
+}
+
+func (c *echoMyStruct) Process() {
+	for i := range c.In {
+		c.Out <- i
+	}
+}
+
+type myStruct struct {
+	A string `mapstructure:"a"`
+	B string `mapstructure:"b"`
+}
+
 // echo passes input to the output
 type echo struct {
 	In  <-chan int

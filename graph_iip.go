@@ -3,7 +3,11 @@ package goflow
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/mitchellh/mapstructure"
 )
+
+var structType = reflect.TypeOf(struct{}{})
 
 // iip stands for Initial Information Packet representation
 // within the network.
@@ -100,18 +104,35 @@ func (n *Graph) sendIIPs() error {
 			}
 
 			// Check if the IIP data is going to be the right type.
+			dat := ip.data
+			targetType := channel.Type().Elem()
 			t := reflect.TypeOf(ip.data)
-			if !t.AssignableTo(channel.Type().Elem()) {
-				if shouldClose {
-					channel.Close()
-				}
+			if !t.AssignableTo(targetType) {
 
-				return fmt.Errorf("can't send IIP: %v cannot fit into %v", reflect.TypeOf(ip.data), channel.Type())
+				// The thing we received wasn't _exactly_ the right type, but see if we can intelligently convert it using mapstructure.
+
+				if t == structType {
+					// If the expected type is a struct, then it doesn't really matter what the input data is, so accept anything.
+					dat = struct{}{}
+				} else {
+					// Else, try to convert using mapstructure.
+					dp := reflect.New(targetType)
+					di := dp.Interface()
+					if err := mapstructure.Decode(ip.data, di); err != nil {
+						// If map structure fails, we're out of ideas.
+						if shouldClose {
+							channel.Close()
+						}
+						return fmt.Errorf("can't send IIP: %v cannot fit into %v", reflect.TypeOf(ip.data), channel.Type())
+					}
+					dp = reflect.ValueOf(di)
+					dat = dp.Elem().Interface()
+				}
 			}
 
 			// Send data to the port
 			go func() {
-				channel.Send(reflect.ValueOf(ip.data))
+				channel.Send(reflect.ValueOf(dat))
 				if shouldClose {
 					channel.Close()
 				}
