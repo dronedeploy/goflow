@@ -88,8 +88,14 @@ func (n *Graph) sendIIPs() error {
 		}
 
 		if found {
+			// Make sure the channel is valid.
+			if channel.IsZero() {
+				return fmt.Errorf("port lookup returned invalid channel")
+			}
+
 			// Check if the IIP data is going to be the right type.
-			if !reflect.TypeOf(ip.data).AssignableTo(channel.Type().Elem()) {
+			t := reflect.TypeOf(ip.data)
+			if !t.AssignableTo(channel.Type().Elem()) {
 				if shouldClose {
 					channel.Close()
 				}
