@@ -12,9 +12,15 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out common actions repository
+        uses: actions/checkout@v4
+        with:
+          repository: dronedeploy/github-actions
+          submodules: recursive
+          ssh-key: ${{ secrets.DRONEDEPLOY_ACTIONS_DEPLOY_KEY  }}
+          path: ./.github/common-actions/
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: ./.github/common-actions/external/golangci/golangci-lint-action@v2
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
           version: v1.31
